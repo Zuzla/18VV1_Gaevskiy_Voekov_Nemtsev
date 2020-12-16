@@ -9,13 +9,12 @@
 using namespace std;
 
 //Прототипы функций
-void GetOffset(unsigned int *, const char *);
-void c(const wchar_t * fileName);
-void g(const wchar_t * imageName, const wchar_t * textName);
-void e(const wchar_t * imageName, const wchar_t * textName);
+void c(const wchar_t * fileName);//проверяем
+void r(const wchar_t * imageName, const wchar_t * textName);//вынимаем
+void e(const wchar_t * imageName, const wchar_t * textName);//заносим
 
 //Константы
 const char cMask = 0x01;//Для выдёргивания из текста бита
 const char cMask2 = 0xFE;//Для обнуления младшего бита байта изображения
-const char cTag[5] = "SI";
+const char cTag[5] = "SI";//метка
 

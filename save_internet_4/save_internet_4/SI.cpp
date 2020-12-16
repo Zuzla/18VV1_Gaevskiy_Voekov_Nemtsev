@@ -2,6 +2,8 @@
 
 int wmain(int argc,const wchar_t *argv[])
 {
+
+
 	if (argc == 3)
 	{
 		if (!wcscmp(argv[1], TEXT(L"-c")))
@@ -17,19 +19,19 @@ int wmain(int argc,const wchar_t *argv[])
 	{
 		if (!wcscmp(argv[1], TEXT(L"-e")))
 			e(argv[2], argv[3]);
-		else if (!wcscmp(argv[1], TEXT(L"-g")))
-			g(argv[2], argv[3]);
+		else if (!wcscmp(argv[1], TEXT(L"-r")))
+			r(argv[2], argv[3]);
 		else
 		{
 			cout << "-e <*.bmp> <*.txt>\n";
-			cout << "-g <*.bmp> <*.txt>\n";
+			cout << "-r <*.bmp> <*.txt>\n";
 		}
 	}
 	else
 	{
 		cout << "-c <*.bmp>\n";
 		cout << "-e <*.bmp> <*.txt>\n";
-		cout << "-g <*.bmp> <*.txt>\n";
+		cout << "-r <*.bmp> <*.txt>\n";
 	}
 	return 0;
 }

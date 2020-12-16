@@ -1,17 +1,6 @@
 #include "SI.h"
 
-void GetOffset(unsigned int * pOffset, const char * Buffer)
-{
-	*pOffset = 0; //Получение смещения
-	*pOffset = *pOffset | Buffer[13];
-	*pOffset = *pOffset << 8;
-	*pOffset = *pOffset | Buffer[12];
-	*pOffset = *pOffset << 8;
-	*pOffset = *pOffset | Buffer[11];
-	*pOffset = *pOffset << 8;
-	*pOffset = *pOffset | Buffer[10];
-}
-
+//ищем метку, если нет, то нет
 void c(const wchar_t * fileName)
 {
 	HANDLE hFile;
@@ -21,18 +10,21 @@ void c(const wchar_t * fileName)
 	////Проверка на наличие секретного сообщения
 	//Открываем изображение
 	if (INVALID_HANDLE_VALUE == (hFile = CreateFileW(fileName,
-		GENERIC_READ, FILE_SHARE_READ,
+		GENERIC_READ, FILE_SHARE_READ,//Запрошенный доступ к файлу || Запрошенный режим общего доступа
 		NULL, OPEN_EXISTING,
-		FILE_ATTRIBUTE_NORMAL, NULL)))
+		FILE_ATTRIBUTE_NORMAL, NULL)))//атрибуты
+	{
 		cout << "Can't open file\n";
+		exit(0);
+	}
 	
 	//Читаем информацию о файле и 40 байт растра
 	Buffer = new char[100];
 	ReadFile(hFile, Buffer, 100, &dwBytes, NULL);//Берём 100 первых байт
 	
 	unsigned int uiOffset;
-	GetOffset(&uiOffset, Buffer);
-	
+	//GetOffset(&uiOffset, Buffer);//получаем смещение
+	uiOffset = 0;
 	//Формирование метки из изображения
 	//от смещения — 40 байт
 	unsigned char cTag2[5] = { 0 };
@@ -46,14 +38,15 @@ void c(const wchar_t * fileName)
 			char cImageBit = 0;
 			cImageByte = Buffer[uiOffset];
 			cImageBit = cImageByte & cMask;
-				cImageBit = cImageBit << 7;
+			cImageBit = cImageBit << 7;
 			cTag2[i] = cTag2[i] >> 1;
 			cTag2[i] = cTag2[i] | cImageBit;
 			uiOffset++;
 		}
 	}
-	char cTagTemp[5] = { cTag2[0], cTag2[1], cTag2[2], cTag2[3],
-	cTag2[4] };//для сравнение с меткой
+	
+	char cTagTemp[5] = { cTag2[0], cTag2[1], cTag2[2], cTag2[3], cTag2[4] };//для сравнение с меткой
+	
 	if (strcmp(cTag, cTagTemp))
 	{
 		printf("No secret text here.\n");
@@ -63,29 +56,37 @@ void c(const wchar_t * fileName)
 	CloseHandle(hFile);
 	delete[] Buffer;
 }
-void g(const wchar_t * imageName, const wchar_t * textName)
+
+void r(const wchar_t * imageName, const wchar_t * textName)
 {
 	HANDLE hFile;
 	if (INVALID_HANDLE_VALUE == (hFile = CreateFileW(imageName,
 		GENERIC_READ, FILE_SHARE_READ,
 		NULL, OPEN_EXISTING,
 		FILE_ATTRIBUTE_NORMAL, NULL)))
+	{
 		cout << "Can't open file\n";
+		exit(0);
+	}
 	
 	DWORD dwBytes = 0, BufSize = 0, dwBytes1 = 0;
-	BufSize = GetFileSize(hFile, NULL);
-	
+	BufSize = GetFileSize(hFile, NULL);//размер изображения	
 	char * Buffer = new char[BufSize / sizeof(char)];
-	ReadFile(hFile, Buffer, BufSize, &dwBytes, NULL);
+
+	ReadFile(hFile, Buffer, BufSize, &dwBytes, NULL);//чтение файла
 	
 	unsigned int uiOffset;
-	GetOffset(&uiOffset, Buffer);
+	//GetOffset(&uiOffset, Buffer);
+	
+	uiOffset = 0;
+
 	char cTagTemp[5], cImageByte;
-	unsigned char cTag2[5] = { 0 };
+	unsigned char cTag2[5];
 	
 	//Проверка метки
 	for (int i = 0; i < 5; i++)
 		cTag2[i] = 0;//Пока что обнуляем
+	
 	for (int i = 0; i < 5; i++)
 	{
 		for (int j = 0; j < 8; j++)
@@ -93,57 +94,60 @@ void g(const wchar_t * imageName, const wchar_t * textName)
 			char cImageBit = 0;
 			cImageByte = Buffer[uiOffset];
 			cImageBit = cImageByte & cMask;
-				cImageBit = cImageBit << 7;
+			cImageBit = cImageBit << 7;
 			cTag2[i] = cTag2[i] >> 1;
 			cTag2[i] = cTag2[i] | cImageBit;
 			uiOffset++;
 		}
 	}
+
 	for (int i = 0; i < 5; i++)
 		cTagTemp[i] = cTag2[i];
+	
 	if (!strcmp(cTag, cTagTemp))//Если метка есть узнаём размер	текста и восстанавливаем его
 	{
 		//Считываем размер
 		unsigned char cTextSize[4] = { 0 };
 		for (int i = 0; i < 4; i++)
 		{
-		for (int j = 0; j < 8; j++)
-		{
-		char cImageBit = 0;
-		cImageByte = Buffer[uiOffset];
-		cImageBit = cImageByte & cMask;
-		cImageBit = cImageBit << 7;
-		cTextSize[i] = cTextSize[i] >> 1;
-		cTextSize[i] = cTextSize[i] | cImageBit;
-		uiOffset++;
-		}
+			for (int j = 0; j < 8; j++)
+			{
+			char cImageBit = 0;
+			cImageByte = Buffer[uiOffset];
+			cImageBit = cImageByte & cMask;
+			cImageBit = cImageBit << 7;
+			cTextSize[i] = cTextSize[i] >> 1;
+			cTextSize[i] = cTextSize[i] | cImageBit;
+			uiOffset++;
+			}
 		}
 		
 		//Преобразование в int cTextSize
 		int iTextSize = 0;
 		for (int i = 3; i > -1; i--)
 		{
-		iTextSize = iTextSize << 8;
-		iTextSize = iTextSize | cTextSize[i];
+			iTextSize = iTextSize << 8;
+			iTextSize = iTextSize | cTextSize[i];
 		}
+
 		//Отводим память под текст
 		char * Buffer2 = new char[iTextSize];
 		
 		//Считываем текст
 		for (int i = 0; i < iTextSize; i++)
 		{
-		unsigned char BufferTemp = 0;
-		for (int j = 0; j < 8; j++)
-		{
-		char cImageBit = 0;
-		cImageByte = Buffer[uiOffset];
-		cImageBit = cImageByte & cMask;
-		cImageBit = cImageBit << 7;
-		BufferTemp = BufferTemp >> 1;
-		BufferTemp = BufferTemp | cImageBit;
-		uiOffset++;
-		}
-		Buffer2[i] = BufferTemp;
+			unsigned char BufferTemp = 0;
+			for (int j = 0; j < 8; j++)
+			{
+				char cImageBit = 0;
+				cImageByte = Buffer[uiOffset];
+				cImageBit = cImageByte & cMask;
+				cImageBit = cImageBit << 7;
+				BufferTemp = BufferTemp >> 1;
+				BufferTemp = BufferTemp | cImageBit;
+				uiOffset++;
+			}
+			Buffer2[i] = BufferTemp;
 		}
 		HANDLE hText;
 		
@@ -152,8 +156,13 @@ void g(const wchar_t * imageName, const wchar_t * textName)
 		GENERIC_WRITE, FILE_SHARE_WRITE,
 		NULL, CREATE_ALWAYS,
 		FILE_ATTRIBUTE_NORMAL, NULL)))
-		cout << "Can't create file\n";
+		{
+			cout << "Can't create file\n";
+			exit(0);
+		}
+
 		WriteFile(hText, Buffer2, iTextSize, &dwBytes1, NULL);
+		
 		CloseHandle(hText);
 		delete[] Buffer2;
 	}
@@ -165,17 +174,20 @@ void g(const wchar_t * imageName, const wchar_t * textName)
 	CloseHandle(hFile);
 	delete[] Buffer;
 }
-void e(const wchar_t * imageName, const wchar_t *	textName)
+
+void e(const wchar_t * imageName, const wchar_t *	textName)//заносим текст
 {
 	HANDLE hFile;
 	//HANDLE hFile1;
 	if (INVALID_HANDLE_VALUE == (hFile = CreateFileW(imageName,
 		GENERIC_READ, FILE_SHARE_READ,
 		NULL, OPEN_EXISTING,
-		FILE_ATTRIBUTE_NORMAL, NULL)))
-
-		
+		FILE_ATTRIBUTE_NORMAL, NULL)))		
+	{
 		cout << "Can't open the image\n";
+		exit(0);
+	}
+	
 	DWORD dwBytes = 0, BufSize = 0, dwBytes1 = 0;
 	BufSize = GetFileSize(hFile, NULL);
 	
@@ -188,19 +200,22 @@ void e(const wchar_t * imageName, const wchar_t *	textName)
 		GENERIC_READ, FILE_SHARE_READ,
 		NULL, OPEN_EXISTING,
 		FILE_ATTRIBUTE_NORMAL, NULL)))
+	{
 		cout << "Can't open the text file\n";
-	
+		exit(0);
+	}
+
 	//Считывание текста в буфер
-		DWORD dwBytes2 = 0, BufSize2 = 0;
+	DWORD dwBytes2 = 0, BufSize2 = 0;
 	BufSize2 = GetFileSize(hText, NULL);
+	
 	char *Buffer2 = new char[BufSize2 / sizeof(char)];
 	ReadFile(hText, Buffer2, BufSize2, &dwBytes2, NULL);
 	
-	////Запись текста в изображение
-	
+	////Запись текста в изображение	
 	//Получение значения смещения
 	unsigned int uiOffset = 0;
-	GetOffset(&uiOffset, Buffer);
+	//GetOffset(&uiOffset, Buffer);
 	
 	//Получение значений цветов и формирование новых
 	char cImageByte;
@@ -220,6 +235,7 @@ void e(const wchar_t * imageName, const wchar_t *	textName)
 	for (int i = 0; i < 5; i++)
 	{
 		char temp = cTag[i], tempbit = 0;
+		
 		for (char j = 0; j < 8; j++)
 		{
 			cImageByte = Buffer[uiOffset];
@@ -290,7 +306,11 @@ void e(const wchar_t * imageName, const wchar_t *	textName)
 		GENERIC_WRITE, FILE_SHARE_WRITE,
 		NULL, TRUNCATE_EXISTING,
 		FILE_ATTRIBUTE_NORMAL, NULL)))
+	{
 		cout << "Writing in the file failed.\n";
+		exit(0);
+	}
+	
 	//Запись в файл
 	WriteFile(hFile, Buffer, BufSize, &dwBytes1, NULL);
 	//Закрытие HANDLE
